@@ -1,4 +1,3 @@
-# backend/app.py
 import os
 from flask import Flask, send_from_directory
 from flask_cors import CORS
@@ -10,39 +9,39 @@ from config import Config
 app = Flask(__name__, static_folder=None)
 app.config.from_object(Config)
 
-from flask_cors import CORS
-
+# --- CORS Configuration ---
 frontend_origin = app.config.get("FRONTEND_URL")
+
 if frontend_origin:
     CORS(
         app,
+        resources={r"/api/*": {"origins": [frontend_origin]}},
         supports_credentials=True,
-        origins=[frontend_origin],
         allow_headers=["Content-Type", "Authorization"],
         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     )
-    print(f"CORS enabled for {frontend_origin} with credentials")
+    print(f"✅ CORS enabled for origin: {frontend_origin}")
 else:
     CORS(app)
     print("⚠️ CORS: FRONTEND_URL not set. Using permissive mode without credentials.")
 
-
+# --- Database Initialization ---
 db.init_app(app)
 
 with app.app_context():
     db.create_all()
-    # Create default user if not exists
     if not User.query.filter_by(email="user@gmail.com").first():
         u = User(email="user@gmail.com", name="User")
         u.set_password("1234")
         db.session.add(u)
         db.session.commit()
-        print("Default user created: user@gmail.com / 1234")
+        print("✅ Default user created: user@gmail.com / 1234")
 
+# --- Register Blueprints ---
 app.register_blueprint(auth_bp, url_prefix="/api/auth")
 app.register_blueprint(leads_bp, url_prefix="/api/leads")
 
-# serve static frontend files (if you put frontend next to backend)
+# --- Serve Frontend Files ---
 @app.route('/')
 def serve_index():
     frontend_dir = os.path.join(os.path.dirname(__file__), '..', 'frontend')
@@ -63,6 +62,6 @@ def serve_static(filename):
     frontend_dir = os.path.join(os.path.dirname(__file__), '..', 'frontend')
     return send_from_directory(frontend_dir, filename)
 
+# --- Run the App ---
 if __name__ == "__main__":
-    # Port env var provided by Render
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
