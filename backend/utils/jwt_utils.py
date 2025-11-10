@@ -17,18 +17,21 @@ def jwt_required(f):
     from functools import wraps
     @wraps(f)
     def decorated(*args, **kwargs):
-        token = None
-        auth_header = request.headers.get('Authorization')
-        if auth_header and auth_header.startswith("Bearer "):
-            token = auth_header.split(" ")[1]
+        token = request.cookies.get('token')
+        if not token and 'Authorization' in request.headers:
+            token = request.headers.get('Authorization').split('Bearer ')[-1]
+
         if not token:
             return jsonify({"error": "Missing token"}), 401
+
         try:
             payload = jwt.decode(token, current_app.config['JWT_SECRET'], algorithms=[current_app.config['JWT_ALGORITHM']])
             request.user = payload
         except jwt.ExpiredSignatureError:
             return jsonify({"error": "Token expired"}), 401
-        except Exception:
+        except Exception as e:
+            print("JWT decode error:", e)
             return jsonify({"error": "Invalid token"}), 401
+
         return f(*args, **kwargs)
     return decorated

@@ -50,4 +50,4 @@ def login():
 def logout():
     resp = make_response(jsonify({"success": True}))
     resp.delete_cookie('token')
-    return resp
+    return resp  
