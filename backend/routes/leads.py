@@ -1,5 +1,7 @@
+# backend/routes/leads.py
 from flask import Blueprint, request, jsonify
 from models import Lead, db
+from sqlalchemy import or_, func
 from utils.jwt_utils import jwt_required
 from utils.validators import validate_lead
 
@@ -15,13 +17,13 @@ def get_leads():
         return jsonify({"error": "Invalid pagination parameters"}), 400
 
     search = request.args.get('search', '').strip().lower()
-
     query = Lead.query
+
     if search:
         query = query.filter(
-            db.or_(
-                db.func.lower(Lead.name).like(f"%{search}%"),
-                db.func.lower(Lead.email).like(f"%{search}%")
+            or_(
+                func.lower(Lead.name).like(f"%{search}%"),
+                func.lower(Lead.email).like(f"%{search}%")
             )
         )
 
@@ -35,8 +37,7 @@ def get_leads():
                 "email": l.email,
                 "phone": l.phone,
                 "status": l.status
-            }
-            for l in paginated.items
+            } for l in paginated.items
         ],
         "page": page,
         "per_page": per_page,
@@ -55,10 +56,7 @@ def create_lead():
     name = data["name"].strip()
     email = data["email"].strip()
 
-    # Check for duplicates
-    duplicate = Lead.query.filter(
-        db.or_(Lead.name == name, Lead.email == email)
-    ).first()
+    duplicate = Lead.query.filter(or_(Lead.name == name, Lead.email == email)).first()
     if duplicate:
         dup_field = "name" if duplicate.name == name else "email"
         return jsonify({"error": f"A lead with the same {dup_field} already exists."}), 400
@@ -86,7 +84,6 @@ def create_lead():
             "status": lead.status
         }
     }), 201
-
 
 
 @leads_bp.route("/<int:lead_id>", methods=["PUT"])

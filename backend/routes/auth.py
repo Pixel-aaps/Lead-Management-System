@@ -1,7 +1,7 @@
+# backend/routes/auth.py
 from flask import Blueprint, request, jsonify, make_response, current_app
-from models import User
+from models import User, db
 from utils.jwt_utils import create_token
-from models import db
 import traceback
 
 auth_bp = Blueprint('auth', __name__)
@@ -21,15 +21,10 @@ def login():
         if not user or not user.check_password(password):
             return jsonify({"error": "Invalid credentials"}), 401
 
-        # Generate JWT
         token = create_token(user)
         print("✅ JWT created for:", email)
 
-        # Send both cookie + token in JSON response
-        resp = make_response(jsonify({
-            "success": True,
-            "token": token
-        }))
+        resp = make_response(jsonify({"success": True, "token": token}))
         resp.set_cookie(
             'token', token,
             httponly=True,
@@ -43,7 +38,6 @@ def login():
         print("LOGIN ERROR:", e)
         traceback.print_exc()
         return jsonify({"error": "Server error", "details": str(e)}), 500
-
 
 
 @auth_bp.route("/logout", methods=["POST"])

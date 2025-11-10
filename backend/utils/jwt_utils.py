@@ -1,6 +1,8 @@
+# backend/utils/jwt_utils.py
 import jwt
 import datetime
 from flask import request, jsonify, current_app
+from functools import wraps
 
 def create_token(user):
     payload = {
@@ -9,12 +11,9 @@ def create_token(user):
         "exp": datetime.datetime.utcnow() + datetime.timedelta(seconds=current_app.config['JWT_EXP_DELTA_SECONDS'])
     }
     token = jwt.encode(payload, current_app.config['JWT_SECRET'], algorithm=current_app.config['JWT_ALGORITHM'])
-    if isinstance(token, bytes):
-        token = token.decode('utf-8')
-    return token
+    return token if isinstance(token, str) else token.decode('utf-8')
 
 def jwt_required(f):
-    from functools import wraps
     @wraps(f)
     def decorated(*args, **kwargs):
         token = request.cookies.get('token')
