@@ -1,4 +1,4 @@
-const API_BASE = "http://127.0.0.1:5000"; 
+const API_BASE = "https://lead-management-system-1-01rf.onrender.com"; 
 
 class ApiError extends Error {
     constructor(message, status) {
