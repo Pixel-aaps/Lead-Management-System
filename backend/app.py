@@ -10,16 +10,7 @@ app = Flask(__name__)
 app.config.from_object(Config)
 app.config['DEBUG'] = True
 app.config['PROPAGATE_EXCEPTIONS'] = True  
-
-# ✅ Allow only your deployed frontend (Vercel) for safety
-CORS(app, resources={r"/*": {
-    "origins": [
-        "https://lmsfro-5x28vu5n3-avaneesh6404-3847s-projects.vercel.app",
-        "http://localhost:5500"
-    ],
-    "allow_headers": ["Content-Type", "Authorization"],
-    "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-}}, supports_credentials=False)
+CORS(app,supports_credentials=True)
 
 # ✅ Initialize database
 db.init_app(app)
