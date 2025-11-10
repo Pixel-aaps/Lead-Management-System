@@ -10,7 +10,7 @@ app = Flask(__name__)
 app.config.from_object(Config)
 app.config['DEBUG'] = True
 app.config['PROPAGATE_EXCEPTIONS'] = True  
-CORS(app, supports_credentials=True)
+CORS(app, origins = ["https://lmsfrontend-duyya6kd4-avaneesh6404-3847s-projects.vercel.app"],supports_credentials=True)
 
 db.init_app(app)
 
