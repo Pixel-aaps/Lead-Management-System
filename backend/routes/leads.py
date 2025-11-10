@@ -1,7 +1,9 @@
+# backend/routes/leads.py
 from flask import Blueprint, request, jsonify
 from models import Lead, db
 from utils.jwt_utils import jwt_required
 from utils.validators import validate_lead
+from sqlalchemy import or_, func
 
 leads_bp = Blueprint('leads', __name__)
 
@@ -19,9 +21,9 @@ def get_leads():
     query = Lead.query
     if search:
         query = query.filter(
-            db.or_(
-                db.func.lower(Lead.name).like(f"%{search}%"),
-                db.func.lower(Lead.email).like(f"%{search}%")
+            or_(
+                func.lower(Lead.name).like(f"%{search}%"),
+                func.lower(Lead.email).like(f"%{search}%")
             )
         )
 
@@ -48,6 +50,10 @@ def get_leads():
 @jwt_required
 def create_lead():
     data = request.get_json() or {}
+    # ensure default status if not provided
+    if 'status' not in data or data.get('status') is None:
+        data['status'] = "New"
+
     errors = validate_lead(data)
     if errors:
         return jsonify({"error": "Validation failed", "details": errors}), 400
@@ -57,7 +63,7 @@ def create_lead():
 
     # Check for duplicates
     duplicate = Lead.query.filter(
-        db.or_(Lead.name == name, Lead.email == email)
+        or_(Lead.name == name, Lead.email == email)
     ).first()
     if duplicate:
         dup_field = "name" if duplicate.name == name else "email"
@@ -131,4 +137,4 @@ def delete_lead(lead_id):
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
-    return jsonify({"deleted": True})  
+    return jsonify({"deleted": True})

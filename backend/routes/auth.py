@@ -1,7 +1,7 @@
+# backend/routes/auth.py
 from flask import Blueprint, request, jsonify, make_response, current_app
-from models import User
+from models import User, db
 from utils.jwt_utils import create_token
-from models import db
 import traceback
 
 auth_bp = Blueprint('auth', __name__)
@@ -30,13 +30,24 @@ def login():
             "success": True,
             "token": token
         }))
-        resp.set_cookie(
-            'token', token,
-            httponly=True,
-            secure=current_app.config.get('COOKIE_SECURE', False),
-            samesite=current_app.config.get('COOKIE_SAMESITE', 'Lax'),
-            max_age=current_app.config.get('JWT_EXP_DELTA_SECONDS', 3600)
-        )
+
+        # Set cookie if cookie support configured
+        cookie_name = current_app.config.get('COOKIE_NAME', 'token')
+        cookie_secure = current_app.config.get('COOKIE_SECURE', False)
+        cookie_samesite = current_app.config.get('COOKIE_SAMESITE', 'Lax')
+        max_age = current_app.config.get('JWT_EXP_DELTA_SECONDS', 3600)
+
+        # Only set cookie if FRONTEND_URL is configured (we enabled credentials then)
+        if current_app.config.get('FRONTEND_URL'):
+            resp.set_cookie(
+                cookie_name,
+                token,
+                httponly=True,
+                secure=cookie_secure,
+                samesite=cookie_samesite,
+                max_age=max_age
+            )
+
         return resp
 
     except Exception as e:
@@ -45,9 +56,9 @@ def login():
         return jsonify({"error": "Server error", "details": str(e)}), 500
 
 
-
 @auth_bp.route("/logout", methods=["POST"])
 def logout():
     resp = make_response(jsonify({"success": True}))
-    resp.delete_cookie('token')
-    return resp  
+    cookie_name = current_app.config.get('COOKIE_NAME', 'token')
+    resp.delete_cookie(cookie_name)
+    return resp

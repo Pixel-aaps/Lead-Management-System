@@ -1,22 +1,37 @@
+# backend/app.py
+import os
 from flask import Flask, send_from_directory
 from flask_cors import CORS
 from models import db, User
 from routes.auth import auth_bp
 from routes.leads import leads_bp
 from config import Config
-import os
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder=None)
 app.config.from_object(Config)
-app.config['DEBUG'] = True
-app.config['PROPAGATE_EXCEPTIONS'] = True  
-CORS(app,supports_credentials=True)
+
+from flask_cors import CORS
+
+frontend_origin = app.config.get("FRONTEND_URL")
+if frontend_origin:
+    CORS(
+        app,
+        supports_credentials=True,
+        origins=[frontend_origin],
+        allow_headers=["Content-Type", "Authorization"],
+        methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    )
+    print(f"CORS enabled for {frontend_origin} with credentials")
+else:
+    CORS(app)
+    print("⚠️ CORS: FRONTEND_URL not set. Using permissive mode without credentials.")
+
 
 db.init_app(app)
 
 with app.app_context():
     db.create_all()
-    # Create uSEr if not exists 
+    # Create default user if not exists
     if not User.query.filter_by(email="user@gmail.com").first():
         u = User(email="user@gmail.com", name="User")
         u.set_password("1234")
@@ -27,6 +42,7 @@ with app.app_context():
 app.register_blueprint(auth_bp, url_prefix="/api/auth")
 app.register_blueprint(leads_bp, url_prefix="/api/leads")
 
+# serve static frontend files (if you put frontend next to backend)
 @app.route('/')
 def serve_index():
     frontend_dir = os.path.join(os.path.dirname(__file__), '..', 'frontend')
@@ -47,6 +63,6 @@ def serve_static(filename):
     frontend_dir = os.path.join(os.path.dirname(__file__), '..', 'frontend')
     return send_from_directory(frontend_dir, filename)
 
-# Run app
 if __name__ == "__main__":
+    # Port env var provided by Render
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))

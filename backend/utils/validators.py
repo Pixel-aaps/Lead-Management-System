@@ -1,9 +1,16 @@
+# backend/utils/validators.py
 import re
 
 ALLOWED_STATUS = ["New", "In Progress", "Converted"]
 
 def validate_lead(data, partial=False):
     errors = []
+
+    # If status omitted on create, treat as New
+    status = data.get('status', None)
+    if status is None and not partial:
+        status = "New"
+        data['status'] = status
 
     name = data.get('name')
     email = data.get('email')
