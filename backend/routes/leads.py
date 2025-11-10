@@ -1,12 +1,11 @@
-# backend/routes/leads.py
 from flask import Blueprint, request, jsonify
 from models import Lead, db
-from sqlalchemy import or_, func
 from utils.jwt_utils import jwt_required
 from utils.validators import validate_lead
 
 leads_bp = Blueprint('leads', __name__)
 
+@leads_bp.route("", methods=["GET"])
 @leads_bp.route("/", methods=["GET"])
 @jwt_required
 def get_leads():
@@ -18,33 +17,26 @@ def get_leads():
 
     search = request.args.get('search', '').strip().lower()
     query = Lead.query
-
     if search:
         query = query.filter(
-            or_(
-                func.lower(Lead.name).like(f"%{search}%"),
-                func.lower(Lead.email).like(f"%{search}%")
+            db.or_(
+                db.func.lower(Lead.name).like(f"%{search}%"),
+                db.func.lower(Lead.email).like(f"%{search}%")
             )
         )
 
     paginated = query.paginate(page=page, per_page=per_page, error_out=False)
-
     return jsonify({
         "leads": [
-            {
-                "id": l.id,
-                "name": l.name,
-                "email": l.email,
-                "phone": l.phone,
-                "status": l.status
-            } for l in paginated.items
+            {"id": l.id, "name": l.name, "email": l.email, "phone": l.phone, "status": l.status}
+            for l in paginated.items
         ],
         "page": page,
         "per_page": per_page,
         "total": paginated.total
     })
 
-
+@leads_bp.route("", methods=["POST"])
 @leads_bp.route("/", methods=["POST"])
 @jwt_required
 def create_lead():
@@ -56,7 +48,9 @@ def create_lead():
     name = data["name"].strip()
     email = data["email"].strip()
 
-    duplicate = Lead.query.filter(or_(Lead.name == name, Lead.email == email)).first()
+    duplicate = Lead.query.filter(
+        db.or_(Lead.name == name, Lead.email == email)
+    ).first()
     if duplicate:
         dup_field = "name" if duplicate.name == name else "email"
         return jsonify({"error": f"A lead with the same {dup_field} already exists."}), 400
@@ -67,24 +61,12 @@ def create_lead():
         phone=data.get("phone", "").strip(),
         status=data.get("status", "New")
     )
-
     db.session.add(lead)
-    try:
-        db.session.commit()
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"error": str(e)}), 500
+    db.session.commit()
 
     return jsonify({
-        "lead": {
-            "id": lead.id,
-            "name": lead.name,
-            "email": lead.email,
-            "phone": lead.phone,
-            "status": lead.status
-        }
+        "lead": {"id": lead.id, "name": lead.name, "email": lead.email, "phone": lead.phone, "status": lead.status}
     }), 201
-
 
 @leads_bp.route("/<int:lead_id>", methods=["PUT"])
 @jwt_required
@@ -100,32 +82,15 @@ def update_lead(lead_id):
         if field in data:
             setattr(lead, field, data[field])
 
-    try:
-        db.session.commit()
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"error": str(e)}), 500
-
+    db.session.commit()
     return jsonify({
-        "lead": {
-            "id": lead.id,
-            "name": lead.name,
-            "email": lead.email,
-            "phone": lead.phone,
-            "status": lead.status
-        }
+        "lead": {"id": lead.id, "name": lead.name, "email": lead.email, "phone": lead.phone, "status": lead.status}
     })
-
 
 @leads_bp.route("/<int:lead_id>", methods=["DELETE"])
 @jwt_required
 def delete_lead(lead_id):
     lead = Lead.query.get_or_404(lead_id)
     db.session.delete(lead)
-    try:
-        db.session.commit()
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"error": str(e)}), 500
-
+    db.session.commit()
     return jsonify({"deleted": True})

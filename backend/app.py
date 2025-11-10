@@ -1,4 +1,3 @@
-# backend/app.py
 from flask import Flask, send_from_directory
 from flask_cors import CORS
 from models import db, User
@@ -9,13 +8,24 @@ import os
 
 app = Flask(__name__)
 app.config.from_object(Config)
+app.config['DEBUG'] = True
+app.config['PROPAGATE_EXCEPTIONS'] = True  
 
-CORS(app, supports_credentials=True)
+# ✅ Allow only your deployed frontend (Vercel) for safety
+CORS(app, resources={r"/*": {
+    "origins": [
+        "https://lmsfro-5x28vu5n3-avaneesh6404-3847s-projects.vercel.app",
+        "http://localhost:5500"
+    ],
+    "allow_headers": ["Content-Type", "Authorization"],
+    "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+}}, supports_credentials=False)
+
+# ✅ Initialize database
 db.init_app(app)
 
 with app.app_context():
     db.create_all()
-
     # Create default user if not exists
     if not User.query.filter_by(email="user@gmail.com").first():
         u = User(email="user@gmail.com", name="User")
@@ -24,11 +34,10 @@ with app.app_context():
         db.session.commit()
         print("✅ Default user created: user@gmail.com / 1234")
 
-# Register blueprints
+# ✅ Register routes
 app.register_blueprint(auth_bp, url_prefix="/api/auth")
 app.register_blueprint(leads_bp, url_prefix="/api/leads")
 
-# Serve frontend
 @app.route('/')
 def serve_index():
     frontend_dir = os.path.join(os.path.dirname(__file__), '..', 'frontend')
