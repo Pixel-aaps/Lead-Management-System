@@ -1,7 +1,0 @@
-Flask
-Flask-CORS
-PyJWT
-Werkzeug
-Flask-SQLAlchemy
-python-dotenv
-gunicorn

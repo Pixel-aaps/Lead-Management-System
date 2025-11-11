@@ -12,21 +12,17 @@
       <h1 class="text-2xl font-semibold">Leads</h1>
       <button id="logoutBtn" class="bg-red-500 text-white px-3 py-1 rounded">Logout</button>
     </header>
-
     <section class="controls flex items-center justify-between mb-4">
       <div class="flex items-center gap-3">
         <button id="addBtn" class="bg-blue-600 text-white px-3 py-1 rounded">Add New Lead</button>
         <input id="searchInput" placeholder="Search by name or email" class="p-2 border rounded" />
       </div>
-
       <div class="pagination flex items-center gap-3">
         <button id="prevPage" class="px-3 py-1 border rounded">Prev</button>
         <span id="pageInfo" class="text-sm"></span>
         <button id="nextPage" class="px-3 py-1 border rounded">Next</button>
       </div>
     </section>
-
-    <!-- Leads Table -->
     <table id="leadsTable" class="w-full bg-white rounded shadow-sm">
       <thead class="bg-gray-50">
         <tr>
@@ -47,22 +43,18 @@
       <h2 id="modalTitle" class="text-xl font-semibold mb-4">Add New Lead</h2>
       <form id="leadForm" class="space-y-4">
         <input type="hidden" id="leadId" />
-
         <div>
           <label class="block text-sm font-medium">Name</label>
           <input id="leadName" type="text" class="w-full border p-2 rounded" required />
         </div>
-
         <div>
           <label class="block text-sm font-medium">Email</label>
           <input id="leadEmail" type="email" class="w-full border p-2 rounded" required />
         </div>
-
         <div>
           <label class="block text-sm font-medium">Phone</label>
-          <input id="leadPhone" type="text" class="w-full border p-2 rounded" maxlength="10" />
+          <input id="leadPhone" type="text" class="w-full border p-.border p-2 rounded" maxlength="10" />
         </div>
-
         <div>
           <label class="block text-sm font-medium">Status</label>
           <select id="leadStatus" class="w-full border p-2 rounded">
@@ -71,9 +63,7 @@
             <option value="Converted">Converted</option>
           </select>
         </div>
-
         <p id="formError" class="text-red-500 text-sm hidden"></p>
-
         <div class="flex justify-end gap-3">
           <button type="button" id="cancelBtn" class="px-4 py-2 border rounded">Cancel</button>
           <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded">Save</button>
@@ -82,149 +72,147 @@
     </div>
   </div>
 
+  <!-- Load main.js first -->
   <script src="/main.js"></script>
-<script>
-(function() {
-  let page = 1;
-  const per_page = 5;
-  let total = 0;
-  let lastPage = 1;
 
-  // token may be present in localStorage OR the backend may use cookie auth.
-  // Do NOT forcibly redirect if token is missing — allow cookie-only sessions to work.
-  const token = localStorage.getItem('token');
+  <!-- Page logic -->
+  <script>
+    (function () {
+      let page = 1;
+      const per_page = 5;
+      let total = 0;
+      let lastPage = 1;
 
-  const el = id => document.getElementById(id);
-  const tbody = document.querySelector('#leadsTable tbody');
+      const el = id => document.getElementById(id);
+      const tbody = document.querySelector('#leadsTable tbody');
 
-  async function loadLeads() {
-    const searchQuery = el('searchInput').value.trim();
-    try {
-      const res = await apiGet(`/api/leads?page=${page}&per_page=${per_page}&search=${encodeURIComponent(searchQuery)}`);
-      total = res.total || 0;
-      lastPage = Math.max(1, Math.ceil(total / (res.per_page || per_page)));
-      renderTable(res.leads || []);
-    } catch (err) {
-      console.error("Error loading leads:", err);
-      alert("Failed to load leads: " + (err.message || err));
-      // if 401 redirected earlier by apiFetch to login.html, nothing here
-    }
-  }
-
-  function renderTable(data) {
-    tbody.innerHTML = '';
-    data.forEach(l => {
-      const tr = document.createElement('tr');
-      tr.className = 'border-t';
-      tr.innerHTML = `
-        <td class="p-3">${escapeHtml(l.name)}</td>
-        <td class="p-3">${escapeHtml(l.email)}</td>
-        <td class="p-3">${escapeHtml(l.phone||'')}</td>
-        <td class="p-3">${escapeHtml(l.status)}</td>
-        <td class="p-3">
-          <button data-action="edit" data-id="${l.id}" class="mr-2 text-sm px-2 py-1 bg-yellow-400 rounded">Edit</button>
-          <button data-action="delete" data-id="${l.id}" class="text-sm px-2 py-1 bg-red-500 text-white rounded">Delete</button>
-        </td>`;
-      tbody.appendChild(tr);
-    });
-    el('pageInfo').textContent = `Page ${page} of ${lastPage} (${total} leads)`;
-  }
-
-  document.getElementById('searchInput').addEventListener('input', () => {
-    page = 1;
-    loadLeads();
-  });
-
-  tbody.addEventListener('click', async e => {
-    const btn = e.target.closest('button');
-    if (!btn) return;
-    const id = btn.dataset.id;
-
-    if (btn.dataset.action === 'edit') {
-      const row = btn.closest('tr');
-      const lead = {
-        id,
-        name: row.children[0].textContent.trim(),
-        email: row.children[1].textContent.trim(),
-        phone: row.children[2].textContent.trim(),
-        status: row.children[3].textContent.trim(),
-      };
-      openModal(lead);
-    } else if (btn.dataset.action === 'delete') {
-      if (confirm('Delete this lead?')) {
+      async function loadLeads() {
+        const searchQuery = el('searchInput').value.trim();
         try {
-          await apiDelete(`/api/leads/${id}`);
-          loadLeads();
+          const res = await apiGet(`/api/leads?page=${page}&per_page=${per_page}&search=${encodeURIComponent(searchQuery)}`);
+          total = res.total || 0;
+          lastPage = Math.max(1, Math.ceil(total / (res.per_page || per_page)));
+          renderTable(res.leads || []);
         } catch (err) {
-          alert('Delete failed: ' + (err.message || err));
+          console.error("Error loading leads:", err);
+          alert("Failed to load leads: " + (err.message || err));
         }
       }
-    }
-  });
 
-  el('addBtn').onclick = () => openModal();
-  el('prevPage').onclick = () => { if (page > 1) { page--; loadLeads(); } };
-  el('nextPage').onclick = () => { if (page < lastPage) { page++; loadLeads(); } };
-  el('cancelBtn').onclick = closeModal;
-  el('logoutBtn').onclick = async () => {
-    try {
-      // optional: call backend logout to clear cookie
-      await apiPost('/api/auth/logout', {}, false);
-    } catch(_) {}
-    localStorage.removeItem('token');
-    window.location.href = 'login.html';
-  };
-
-  function openModal(lead = null) {
-    el('leadModal').classList.remove('hidden');
-    el('leadModal').classList.add('flex');
-    el('formError').classList.add('hidden');
-    if (lead) {
-      el('modalTitle').textContent = 'Edit Lead';
-      el('leadId').value = lead.id;
-      el('leadName').value = lead.name;
-      el('leadEmail').value = lead.email;
-      el('leadPhone').value = lead.phone;
-      el('leadStatus').value = lead.status;
-    } else {
-      el('modalTitle').textContent = 'Add New Lead';
-      el('leadForm').reset();
-      el('leadId').value = '';
-    }
-  }
-
-  function closeModal() {
-    el('leadModal').classList.add('hidden');
-    el('leadModal').classList.remove('flex');
-  }
-
-  el('leadForm').onsubmit = async e => {
-    e.preventDefault();
-    const payload = {
-      name: el('leadName').value.trim(),
-      email: el('leadEmail').value.trim(),
-      phone: el('leadPhone').value.trim(),
-      status: el('leadStatus').value
-    };
-    const id = el('leadId').value;
-    try {
-      if (id) {
-        await apiPut(`/api/leads/${id}`, payload);
-      } else {
-        await apiPost('/api/leads', payload);
+      function renderTable(data) {
+        tbody.innerHTML = '';
+        data.forEach(l => {
+          const tr = document.createElement('tr');
+          tr.className = 'border-t';
+          tr.innerHTML = `
+            <td class="p-3">${escapeHtml(l.name)}</td>
+            <td class="p-3">${escapeHtml(l.email)}</td>
+            <td class="p-3">${escapeHtml(l.phone || '')}</td>
+            <td class="p-3">${escapeHtml(l.status)}</td>
+            <td class="p-3">
+              <button data-action="edit" data-id="${l.id}" class="mr-2 text-sm px-2 py-1 bg-yellow-400 rounded">Edit</button>
+              <button data-action="delete" data-id="${l.id}" class="text-sm px-2 py-1 bg-red-500 text-white rounded">Delete</button>
+            </td>`;
+          tbody.appendChild(tr);
+        });
+        el('pageInfo').textContent = `Page ${page} of ${lastPage} (${total} leads)`;
       }
-      closeModal();
-      loadLeads();
-    } catch (err) {
-      console.error("Error saving lead:", err);
-      el('formError').textContent = err.message || err;
-      el('formError').classList.remove('hidden');
-    }
-  };
 
-  // initial load
-  loadLeads();
-})();
-</script>
+      // Event Listeners
+      el('searchInput').addEventListener('input', () => {
+        page = 1;
+        loadLeads();
+      });
+
+      tbody.addEventListener('click', async e => {
+        const btn = e.target.closest('button');
+        if (!btn) return;
+        const id = btn.dataset.id;
+        if (btn.dataset.action === 'edit') {
+          const row = btn.closest('tr');
+          const lead = {
+            id,
+            name: row.children[0].textContent.trim(),
+            email: row.children[1].textContent.trim(),
+            phone: row.children[2].textContent.trim(),
+            status: row.children[3].textContent.trim(),
+          };
+          openModal(lead);
+        } else if (btn.dataset.action === 'delete') {
+          if (confirm('Delete this lead?')) {
+            try {
+              await apiDelete(`/api/leads/${id}`);
+              loadLeads();
+            } catch (err) {
+              alert('Delete failed: ' + (err.message || err));
+            }
+          }
+        }
+      });
+
+      el('addBtn').onclick = () => openModal();
+      el('prevPage').onclick = () => { if (page > 1) { page--; loadLeads(); } };
+      el('nextPage').onclick = () => { if (page < lastPage) { page++; loadLeads(); } };
+      el('cancelBtn').onclick = closeModal;
+
+      el('logoutBtn').onclick = async () => {
+        try {
+          await apiPost('/api/auth/logout', {}, false);
+        } catch (_) {}
+        localStorage.removeItem('token');
+        window.location.href = 'login.html';
+      };
+
+      function openModal(lead = null) {
+        el('leadModal').classList.remove('hidden');
+        el('leadModal').classList.add('flex');
+        el('formError').classList.add('hidden');
+        if (lead) {
+          el('modalTitle').textContent = 'Edit Lead';
+          el('leadId').value = lead.id;
+          el('leadName').value = lead.name;
+          el('leadEmail').value = lead.email;
+          el('leadPhone').value = lead.phone;
+          el('leadStatus').value = lead.status;
+        } else {
+          el('modalTitle').textContent = 'Add New Lead';
+          el('leadForm').reset();
+          el('leadId').value = '';
+        }
+      }
+
+      function closeModal() {
+        el('leadModal').classList.add('hidden');
+        el('leadModal').classList.remove('flex');
+      }
+
+      el('leadForm').onsubmit = async e => {
+        e.preventDefault();
+        const payload = {
+          name: el('leadName').value.trim(),
+          email: el('leadEmail').value.trim(),
+          phone: el('leadPhone').value.trim(),
+          status: el('leadStatus').value
+        };
+        const id = el('leadId').value;
+        try {
+          if (id) {
+            await apiPut(`/api/leads/${id}`, payload);
+          } else {
+            await apiPost('/api/leads', payload);
+          }
+          closeModal();
+          loadLeads();
+        } catch (err) {
+          console.error("Error saving lead:", err);
+          el('formError').textContent = err.message || err;
+          el('formError').classList.remove('hidden');
+        }
+      };
+
+      // Initial load
+      loadLeads();
+    })();
+  </script>
 </body>
 </html>

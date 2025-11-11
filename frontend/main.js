@@ -1,80 +1,125 @@
 // frontend/main.js
-const API_BASE = "https://lead-management-system-1-01rf.onrender.com";
+const API_BASE = window.location.origin;  // Auto: https://lead-management-system-1-01rf.onrender.com on Render
 
+/**
+ * Custom API Error with status code
+ */
 class ApiError extends Error {
-    constructor(message, status) {
-        super(message);
-        this.status = status;
-    }
+  constructor(message, status, rawResponse = null) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.rawResponse = rawResponse;
+  }
 }
 
-// path is like "/api/leads" or "/api/leads/1"
+/**
+ * Core fetch wrapper with auth, JSON/FormData support, and error handling
+ */
 async function apiFetch(path, options = {}, auth = true) {
-    const headers = options.headers || {};
+  const headers = { ...options.headers };
+  if (!(options.body instanceof FormData)) {
+    headers["Content-Type"] = headers["Content-Type"] || "application/json";
+  }
 
-    if (!(options && options.body instanceof FormData)) {
-        headers["Content-Type"] = headers["Content-Type"] || "application/json";
+  if (auth) {
+    const token = localStorage.getItem("token");
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
     }
+  }
 
-    if (auth) {
-        const token = localStorage.getItem("token");
-        if (token) headers["Authorization"] = "Bearer " + token;
+  const fetchOptions = {
+    ...options,
+    headers,
+    credentials: "include",
+  };
+
+  if (options.body && !(options.body instanceof FormData)) {
+    fetchOptions.body = JSON.stringify(options.body);
+  }
+
+  let response;
+  try {
+    response = await fetch(API_BASE + path, fetchOptions);
+  } catch (err) {
+    console.error("Network error:", err);
+    throw new ApiError("Network error. Please check your connection.", 0);
+  }
+
+  let data = null;
+  let rawText = "";
+  try {
+    rawText = await response.text();
+    if (rawText) {
+      data = JSON.parse(rawText);
     }
+  } catch (jsonError) {
+    console.warn("Response is not valid JSON:", rawText.substring(0, 200));
+  }
 
-    const fetchOptions = {
-        ...options,
-        headers,
-        credentials: 'include' // crucial for cross-site cookies
-    };
+  if (response.status === 401) {
+    localStorage.removeItem("token");
+    window.location.href = "login.html";
+    return null;
+  }
 
-    const res = await fetch(API_BASE + path, fetchOptions);
-
-    let body = null;
-    try { body = await res.json(); } catch (e) { body = null; }
-
-    if (res.status === 401) {
-        try { localStorage.removeItem('token'); } catch(e){}
-        // redirect user to login page
-        window.location.href = 'login.html';
-        return null;
-    }
-
-    if (!res.ok) {
-        const err = body || { error: `HTTP ${res.status}` };
-        throw new ApiError(err.error || JSON.stringify(err), res.status);
-    }
-    return body;
-}
-
-function apiGet(path) { return apiFetch(path, { method: "GET" }); }
-function apiPost(path, data = {}, auth = true) {
-    const body = (data instanceof FormData) ? data : JSON.stringify(data);
-    const opts = { method: "POST", body };
-    return apiFetch(path, opts, auth);
-}
-function apiPut(path, data) { return apiFetch(path, { method: "PUT", body: JSON.stringify(data) }); }
-function apiDelete(path) { return apiFetch(path, { method: "DELETE" }); }
-
-function escapeHtml(s) {
-  if (!s) return "";
-  return s.replace(/[&<>"']/g, function (m) {
-    return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"})[m];
-  });
-}
-
-function setLoading(isLoading) {
-    document.body.classList.toggle('loading', isLoading);
-}
-
-function sanitizeInput(str) {
-    if (!str) return '';
-    return str.replace(/[<>&"']/g, function(c) {
-        return {
-            '<': '&lt;',
-            '>': '&gt;',
-            '&': '&amp;',
-            '"': '&quot;',
-            "'": '&#39;'
-        }[c];
+  if (!response.ok) {
+    const errorMessage =
+      (data && (data.error || data.message)) ||
+      `HTTP ${response.status} ${response.statusText}`;
+    console.error(`API Error [${response.status}]:`, {
+      url: API_BASE + path,
+      method: options.method || "GET",
+      response: rawText.substring(0, 500),
     });
+    throw new ApiError(errorMessage, response.status, rawText);
+  }
+
+  return data;
 }
+
+// HTTP Method Helpers
+function apiGet(path, auth = true) {
+  return apiFetch(path, { method: "GET" }, auth);
+}
+function apiPost(path, data = {}, auth = true) {
+  return apiFetch(
+    path,
+    {
+      method: "POST",
+      body: data,
+    },
+    auth
+  );
+}
+function apiPut(path, data, auth = true) {
+  return apiFetch(
+    path,
+    {
+      method: "PUT",
+      body: data,
+    },
+    auth
+  );
+}
+function apiDelete(path, auth = true) {
+  return apiFetch(path, { method: "DELETE" }, auth);
+}
+
+/**
+ * Escape HTML to prevent XSS
+ */
+function escapeHtml(text) {
+  if (text == null) return "";
+  const div = document.createElement("div");
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// Export globally
+window.apiGet = apiGet;
+window.apiPost = apiPost;
+window.apiPut = apiPut;
+window.apiDelete = apiDelete;
+window.escapeHtml = escapeHtml;

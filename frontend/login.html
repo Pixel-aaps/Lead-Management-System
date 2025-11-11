@@ -18,40 +18,29 @@
       <p id="msg" class="text-red-600 text-sm mt-2 text-center"></p>
     </form>
   </div>
-
   <script>
-  // render backend base (keep this exact)
-  const API_BASE = "https://lead-management-system-1-01rf.onrender.com";
-
+  const API_BASE = window.location.origin;
   document.getElementById('loginForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const msg = document.getElementById('msg');
     msg.textContent = '';
-
     const email = document.getElementById('email').value.trim();
     const password = document.getElementById('password').value.trim();
-
     try {
       const res = await fetch(`${API_BASE}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
-        credentials: 'include'   // IMPORTANT for cookies
+        credentials: 'include'
       });
-
       let data = {};
       try { data = await res.json(); } catch(_) { data = {}; }
-
       if (!res.ok) {
         msg.textContent = data.error || 'Invalid email or password';
         return;
       }
-
-      // server may return token and/or set a cookie. Save token if present.
       const token = data.token || data.access_token;
       if (token) localStorage.setItem("token", token);
-
-      // proceed to leads page (cookie or token will be used)
       window.location.href = "leads.html";
     } catch (error) {
       console.error('Login error:', error);
