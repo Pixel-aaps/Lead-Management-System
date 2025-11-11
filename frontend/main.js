@@ -1,4 +1,5 @@
-const API_BASE = "https://lead-management-system-1-01rf.onrender.com"; 
+// frontend/main.js
+const API_BASE = "https://lead-management-system-1-01rf.onrender.com";
 
 class ApiError extends Error {
     constructor(message, status) {
@@ -7,6 +8,7 @@ class ApiError extends Error {
     }
 }
 
+// path is like "/api/leads" or "/api/leads/1"
 async function apiFetch(path, options = {}, auth = true) {
     const headers = options.headers || {};
 
@@ -16,16 +18,13 @@ async function apiFetch(path, options = {}, auth = true) {
 
     if (auth) {
         const token = localStorage.getItem("token");
-        if (token) {
-            headers["Authorization"] = "Bearer " + token;
-        }
+        if (token) headers["Authorization"] = "Bearer " + token;
     }
 
-    // include cookies
     const fetchOptions = {
         ...options,
         headers,
-        credentials: 'include' // <- sends cookies (and receives Set-Cookie)
+        credentials: 'include' // crucial for cross-site cookies
     };
 
     const res = await fetch(API_BASE + path, fetchOptions);
@@ -33,15 +32,16 @@ async function apiFetch(path, options = {}, auth = true) {
     let body = null;
     try { body = await res.json(); } catch (e) { body = null; }
 
-    // If 401: redirect to login
     if (res.status === 401) {
         try { localStorage.removeItem('token'); } catch(e){}
-        window.location.href = '/login';
+        // redirect user to login page
+        window.location.href = 'login.html';
         return null;
     }
 
     if (!res.ok) {
-        return body || { error: `HTTP ${res.status}` };
+        const err = body || { error: `HTTP ${res.status}` };
+        throw new ApiError(err.error || JSON.stringify(err), res.status);
     }
     return body;
 }
@@ -62,12 +62,10 @@ function escapeHtml(s) {
   });
 }
 
-// Loading state helpers 
 function setLoading(isLoading) {
     document.body.classList.toggle('loading', isLoading);
 }
 
-// sanitize input 
 function sanitizeInput(str) {
     if (!str) return '';
     return str.replace(/[<>&"']/g, function(c) {

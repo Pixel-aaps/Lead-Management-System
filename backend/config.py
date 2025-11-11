@@ -16,7 +16,7 @@ class Config:
     COOKIE_NAME = os.getenv("COOKIE_NAME", "token")
 
     # Frontend origin - IMPORTANT: set this in Render to your Vercel URL (e.g. https://yourapp.vercel.app)
-    FRONTEND_URL = os.getenv("FRONTEND_URL", "https://leadfront-3jxg3ear7-avaneesh6404-3847s-projects.vercel.app")
+    FRONTEND_URL = os.getenv("FRONTEND_URL", "https://leadfront-ix0kdf9ty-avaneesh6404-3847s-projects.vercel.app")
 
     # Database configuration
     SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL", "sqlite:///leads.db")
