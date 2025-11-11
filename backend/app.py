@@ -35,33 +35,30 @@ with app.app_context():
         u.set_password("1234")
         db.session.add(u)
         db.session.commit()
-        print("✅ Default user created: user@gmail.com / 1234")
+        print("Default user created: user@gmail.com / 1234")
 
-# --- Register Blueprints ---
+# --- Register Blueprints without trailing slash redirects ---
+app.url_map.strict_slashes = False  # Important to prevent 308 redirects
+
 app.register_blueprint(auth_bp, url_prefix="/api/auth")
 app.register_blueprint(leads_bp, url_prefix="/api/leads")
 
 # --- Serve Frontend Files ---
-@app.route('/')
-def serve_index():
-    frontend_dir = os.path.join(os.path.dirname(__file__), '..', 'frontend')
-    return send_from_directory(frontend_dir, 'login.html')
+FRONTEND_DIR = os.path.join(os.path.dirname(__file__), '..', 'frontend')
 
+@app.route('/')
 @app.route('/login')
 def serve_login():
-    frontend_dir = os.path.join(os.path.dirname(__file__), '..', 'frontend')
-    return send_from_directory(frontend_dir, 'login.html')
+    return send_from_directory(FRONTEND_DIR, 'login.html')
 
 @app.route('/leads')
 def serve_leads():
-    frontend_dir = os.path.join(os.path.dirname(__file__), '..', 'frontend')
-    return send_from_directory(frontend_dir, 'leads.html')
+    return send_from_directory(FRONTEND_DIR, 'leads.html')
 
 @app.route('/<path:filename>')
 def serve_static(filename):
-    frontend_dir = os.path.join(os.path.dirname(__file__), '..', 'frontend')
-    return send_from_directory(frontend_dir, filename)
+    return send_from_directory(FRONTEND_DIR, filename)
 
 # --- Run the App ---
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=True)
