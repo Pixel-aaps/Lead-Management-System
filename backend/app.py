@@ -15,10 +15,10 @@ app.config.from_object(Config)
 # ----------------------------------------------------------------------
 ALLOWED_ORIGINS = [
     # Production Vercel URL (replace with your real one if it changes)
-    "https://leadfront-8fsrci3gh-avaneesh6404-3847s-projects.vercel.app",
+     "https://leadfront-ce5en52ql-avaneesh6404-3847s-projects.vercel.app",
     # Development / Vercel preview URLs
     "http://localhost:3000",
-    "http://127.0.0.1:3000",
+    "http://127.0.0.1:5000",
 ]
 
 # If you still want a fallback from env, keep it – otherwise we hard-code
